@@ -1,0 +1,53 @@
+# syntax = docker/dockerfile:1
+
+ARG RUBY_VERSION=3.2.0
+FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim as base
+
+# This tells our apt-get calls to not ask for input, but does not releive us of the 
+# great responsibility of using -y to all commands to indicate that yes, our invocation
+# of the command to install a package means we do, in fact, want that package installed.
+ENV DEBIAN_FRONTEND noninteractive
+
+# Throw-away build stage to reduce size of final image
+FROM base as build
+
+# Install packages needed to build gems
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git libpq-dev libvips pkg-config curl postgresql-client && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Now, we set up RubyGems to avoid building documentation. We don't need the docs
+# inside this image and it slows down gem installation to have them.
+# We also install the latest bundler as well as Rails.  Lastly, to help debug stuff inside
+# the container, I need vi mode on the command line and vim to be installed.  These can be 
+# omitted and aren't needed by the Rails toolchain.
+RUN echo "gem: --no-document" >> ~/.gemrc && \
+    gem install bundler && \
+    gem install rails --version ">= 7.0.0"
+
+# RUN groupadd -r %GROUP% && useradd --no-log-init -m -r -g %USER% %GROUP%
+RUN groupadd -r -g %GROUP_ID% %GROUP% && \
+    useradd --no-log-init -m -r -u %USER_ID% -g %GROUP% %USER%
+
+USER %USER%
+
+# Change bundle path to the container user
+RUN bundle config path %HOMEDIR%/.bundle
+
+# Allows rails server to be accessible outside this docker container
+ENV BINDING="0.0.0.0"
+
+# This entrypoint produces a nice help message and waits around for you to do
+# something with the container.
+# COPY ./docker-entrypoint.sh /root
+COPY ./docker-entrypoint.sh %HOMEDIR% 
+
+# This says to expose the given port to the outside world.
+EXPOSE %EXPOSE%
+
+# Although WORKDIR specifies a base directory where COPY, ADD, RUN, etc. commands run from,
+# we use it here as a default directory where docker run AKA bin/exec commands will
+# be run from. Essentially if you bin/exec bash, this is the directory you will end up in.
+# It is also where docker-compose.yml will map your local directory.
+WORKDIR %WORKDIR%
+# vim: ft=Dockerfile
