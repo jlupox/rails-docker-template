@@ -16,6 +16,12 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libpq-dev libvips pkg-config curl postgresql-client && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
+# RUN groupadd -r %GROUP% && useradd --no-log-init -m -r -g %USER% %GROUP%
+RUN groupadd -r -g %GROUP_ID% %GROUP% && \
+    useradd --no-log-init -m -r -u %USER_ID% -g %GROUP% %USER%
+
+USER %USER%
+
 # Now, we set up RubyGems to avoid building documentation. We don't need the docs
 # inside this image and it slows down gem installation to have them.
 # We also install the latest bundler as well as Rails.  Lastly, to help debug stuff inside
@@ -25,14 +31,8 @@ RUN echo "gem: --no-document" >> ~/.gemrc && \
     gem install bundler && \
     gem install rails --version ">= 7.0.0"
 
-# RUN groupadd -r %GROUP% && useradd --no-log-init -m -r -g %USER% %GROUP%
-RUN groupadd -r -g %GROUP_ID% %GROUP% && \
-    useradd --no-log-init -m -r -u %USER_ID% -g %GROUP% %USER%
-
-USER %USER%
-
-# Change bundle path to the container user
-RUN bundle config path %HOMEDIR%/.bundle
+# # Change bundle path to the container user
+# RUN bundle config path %HOMEDIR%/.bundle
 
 # Allows rails server to be accessible outside this docker container
 ENV BINDING="0.0.0.0"
