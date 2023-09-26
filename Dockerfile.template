@@ -16,6 +16,12 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libpq-dev libvips pkg-config curl postgresql-client && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
+# This installs the latest supported verison of Node. It should be
+# an even numbered version unless you are doing Node development.
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g yarn
+
 # RUN groupadd -r %GROUP% && useradd --no-log-init -m -r -g %USER% %GROUP%
 RUN groupadd -r -g %GROUP_ID% %GROUP% && \
     useradd --no-log-init -m -r -u %USER_ID% -g %GROUP% %USER%
